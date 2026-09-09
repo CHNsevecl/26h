@@ -27,7 +27,7 @@ int main() {
     xTaskCreate(vTask1, "Task 1", 256, &imu, 1, &task1Handle);
     xTaskCreate(vTask2, "Task 2", 256, &id2, 1, &task2Handle);
 
-    vTaskCoreAffinitySet(task2Handle, (1 << 1));
+    // vTaskCoreAffinitySet(task2Handle, (1 << 0));
     
     vTaskStartScheduler();
     

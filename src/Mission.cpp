@@ -2,11 +2,14 @@
 
 // 任务1：每秒打印一次
 void vTask1(void *pvParameters) {
+    std::cout << "123" << std::endl;
     while (1) {
-        if (xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE) {
+        // if (xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE) {
             ((BMI270 *)pvParameters)->print_state();  // 这里的 printf 被保护
-            xSemaphoreGive(xPrintMutex);              // 释放互斥量
-        }
+            // 
+        //     xSemaphoreGive(xPrintMutex);              // 释放互斥量
+        // }
+        // vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
