@@ -4,12 +4,13 @@
 void vTask1(void *pvParameters) {
     std::cout << "123" << std::endl;
     while (1) {
-        // if (xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(xPrintMutex, portMAX_DELAY) == pdTRUE) {
             ((BMI270 *)pvParameters)->print_state();  // 这里的 printf 被保护
             // 
-        //     xSemaphoreGive(xPrintMutex);              // 释放互斥量
-        // }
-        // vTaskDelay(pdMS_TO_TICKS(10));
+            xSemaphoreGive(xPrintMutex);              // 释放互斥量
+        }
+        vTaskDelay(pdMS_TO_TICKS(10)); //不加延时，任务1会一直占用锁，导致2无法正常运行
+        
     }
 }
 
