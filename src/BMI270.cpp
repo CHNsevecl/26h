@@ -12,8 +12,8 @@
  *   如果换正品模块且数据正常(静止 |a| = 1.00g), 把 BMI270::ACC_LSB_PER_G 改回 8192.
  */
 
-#include "BMI270.hpp"
-#include "bmi270_config.h"
+#include "../include/BMI270.hpp"
+#include "../include/bmi270_config.h"
 
 #include <cmath>
 #include <cstdio>
@@ -134,7 +134,7 @@ bool BMI270::init_sensor() {
 }
 
 // ------------------------- 初始化入口 -------------------------
-bool BMI270::begin(uint8_t sda, uint8_t scl, uint8_t addr) {
+bool BMI270::begin(uint8_t sda, uint8_t scl, uint8_t addr) { 
     // 初始化 I2C0
     i2c_init(i2c0, I2C_BAUD);
     gpio_set_function(sda, GPIO_FUNC_I2C);
@@ -271,9 +271,15 @@ bool BMI270::update_attitude(float dt) {
 }
 
 void BMI270::get_euler(float &roll, float &pitch, float &yaw) const {
-    roll  = roll_;
-    pitch = pitch_;
-    yaw   = yaw_;
+     #if BMI270_angle_unit == 0 
+        roll  = roll_  / 180.0f * (float)M_PI;
+        pitch = pitch_ / 180.0f * (float)M_PI;
+        yaw   = yaw_   / 180.0f * (float)M_PI;
+    #else
+        roll  = roll_ ;
+        pitch = pitch_;
+        yaw   = yaw_;
+    #endif
 }
 
 // ------------------------- 数据输出 -------------------------
@@ -289,12 +295,25 @@ void BMI270::print_state() {
     update_attitude(dt);
     float roll, pitch, yaw;
     get_euler(roll, pitch, yaw);
-    printf("%.3f,%.3f,%.3f\n", roll, pitch, yaw);
+    #if BMI270_SERIAL_CHOSEN == 0
+        printf("%.3f,%.3f,%.3f\n", roll, pitch, yaw);
+    #elif BMI270_SERIAL_CHOSEN == 1 || BMI270_SERIAL_CHOSEN == 2
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%.3f,%.3f,%.3f\n", roll, pitch, yaw);
+        uart_.uart_echo_send_string(buf);
+    #endif
+
 #elif BMI270_OUTPUT_MODE == 3
     // ---- VOFA+ 加速度波形: "ax,ay,az\n" (mg) ----
     float acc_mg[3], gyr_dps[3], temp_c;
     if (read(acc_mg, gyr_dps, &temp_c)) {
-        printf("%.1f,%.1f,%.1f\n", acc_mg[0], acc_mg[1], acc_mg[2]);
+        #if BMI270_SERIAL_CHOSEN == 0
+            printf("%.1f,%.1f,%.1f\n", acc_mg[0], acc_mg[1], acc_mg[2]);
+        #elif BMI270_SERIAL_CHOSEN == 1 || BMI270_SERIAL_CHOSEN == 2
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%.1f,%.1f,%.1f\n", acc_mg[0], acc_mg[1], acc_mg[2]);
+            uart_.uart_echo_send_string(buf);
+        #endif
     }
 #else
     // ---- RAW / 滤波模式: 文本输出 ----
