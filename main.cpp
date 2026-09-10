@@ -9,7 +9,8 @@ int main() {
         sleep_ms(100);
     }
 
-    
+    UART uart(uart1, 115200, 8, 9); // 使用 UART1，波特率 115200，TX=GP8，RX=GP9
+    uart.uart_echo_init();
 
     BMI270 imu;
     if (!imu.begin()) {
@@ -25,7 +26,7 @@ int main() {
     xPrintMutex = xSemaphoreCreateMutex();
     
     xTaskCreate(vTask1, "Task 1", 256, &imu, 1, &task1Handle);
-    xTaskCreate(vTask2, "Task 2", 256, &id2, 1, &task2Handle);
+    xTaskCreate(vTask2, "Task 2", 256, &uart, 1, &task2Handle);
 
     // vTaskCoreAffinitySet(task2Handle, (1 << 0));
     
