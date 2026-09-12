@@ -249,23 +249,39 @@ bool BMI270::update_attitude(float dt) {
     float gy = d.gy / GYR_LSB_PER_DPS - BMI270_GYR_BIAS_Y;
     float gz = d.gz / GYR_LSB_PER_DPS - BMI270_GYR_BIAS_Z;
 
+    // acc_f_[0] = ax; acc_f_[1] = ay; acc_f_[2] = az;
+    // gyr_f_[0] = gx; gyr_f_[1] = gy; gyr_f_[2] = gz;
+
+    // Angleacc[0] = -atan2f(ax, az) *180.0f / (float)M_PI;
+    // Angleacc[1] = atan2f(ay, az) *180.0f / (float)M_PI;
+    // Angleacc[2] = atan2f(az, ax) *180.0f / (float)M_PI;
+
+    // AngleGyrop[0] = Angle[0] + gy * dt;
+    // AngleGyrop[1] = Angle[1] + gz * dt;
+    // AngleGyrop[2] = Angle[2] + gx * dt;
+
+    // Angle[0] = BMI270_ATT_KP * AngleGyrop[0] + (1.0f - BMI270_ATT_KP) * Angleacc[0];
+    // Angle[1] = BMI270_ATT_KP * AngleGyrop[1] + (1.0f - BMI270_ATT_KP) * Angleacc[1];
+    // Angle[2] = BMI270_ATT_KP * AngleGyrop[2] + (1.0f - BMI270_ATT_KP) * Angleacc[2];
+
+    // 加速度计角度
+    Angleacc[0] = atan2f(ay, az) * 180.0f / M_PI;   // roll
+    Angleacc[1] = atan2f(-ax, sqrtf(ay*ay + az*az)) * 180.0f / M_PI;  // pitch
+
+    // 陀螺仪积分
+    AngleGyrop[0] = Angle[0] + gx * dt;   // roll
+    AngleGyrop[1] = Angle[1] + gy * dt;   // pitch
+    AngleGyrop[2] = Angle[2] + gz * dt;   // yaw，不融合
+
+    // 互补滤波
+    Angle[1] = BMI270_ATT_KP * AngleGyrop[0] + (1-BMI270_ATT_KP) * Angleacc[0];
+    Angle[0] = BMI270_ATT_KP * AngleGyrop[1] + (1-BMI270_ATT_KP) * Angleacc[1];
+    Angle[2] = AngleGyrop[2];   // yaw 只积分
+
     // 加速度计估算倾角 (度): 重力方向投影
-    float acc_roll  = atan2f(ay, az) * 180.0f / (float)M_PI;
-    float acc_pitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * 180.0f / (float)M_PI;
-
-    // 首次调用: 用加速度角度初始化, 避免开机瞬间姿态跳变
-    if (!att_inited_) {
-        roll_  = acc_roll;
-        pitch_ = acc_pitch;
-        yaw_   = 0.0f;
-        att_inited_ = true;
-        return true;
-    }
-
-    // 互补滤波: 陀螺仪积分(快) + 加速度修正(不漂移)
-    roll_  = BMI270_ATT_KP * (roll_  + gx * dt) + (1.0f - BMI270_ATT_KP) * acc_roll;
-    pitch_ = BMI270_ATT_KP * (pitch_ + gy * dt) + (1.0f - BMI270_ATT_KP) * acc_pitch;
-    yaw_  += gz * dt;   // yaw 无绝对参考, 纯积分 (静止时会缓慢漂移)
+    float acc_roll  = Angle[0];
+    float acc_pitch = Angle[1];
+    float acc_yaw   = Angle[2];
 
     return true;
 }

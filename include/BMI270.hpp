@@ -9,7 +9,7 @@
 //   1 = 滤波数据 (零偏补偿 + EMA 低通)
 //   2 = VOFA+ 姿态 (FireWater: roll,pitch,yaw, 配 cube 3D 控件)
 //   3 = VOFA+ 加速度波形 (FireWater: ax,ay,az, 配 waveform 控件)
-#define BMI270_OUTPUT_MODE  3   // ← 切换这里: 0=raw, 1=filtered, 2=姿态, 3=加速度波形
+#define BMI270_OUTPUT_MODE  2   // ← 切换这里: 0=raw, 1=filtered, 2=姿态, 3=加速度波形
 #define BMI270_SERIAL_CHOSEN 1  // 0=USB CDC, 1=UART0 (BMI270_OUTPUT_MODE=2/3 时生效)
 
 #define BMI270_angle_unit 0  // 0=rad, 1=deg (BMI270_OUTPUT_MODE=2 时生效)
@@ -18,18 +18,23 @@
 #define BMI270_FILTER_ALPHA 0.5f  // EMA 低通系数: 0~1, 越小滤波越强(响应越慢)
 
 // 姿态解算参数 (BMI270_OUTPUT_MODE=2 时生效)
-#define BMI270_ATT_KP       0.98f  // 互补滤波: 陀螺仪权重 (加速度权重 = 1-KP)
+#define BMI270_ATT_KP       0.9f  // 互补滤波: 陀螺仪权重 (加速度权重 = 1-KP)
 #define BMI270_ATT_DT       0.01f  // 姿态更新周期 (秒), 与 main 循环间隔一致
 
 // 陀螺仪零偏 (单位 dps, 静止时各轴读数均值) —— 通过静止采样获得
-#define BMI270_GYR_BIAS_X  0.24f
-#define BMI270_GYR_BIAS_Y  0.04f
-#define BMI270_GYR_BIAS_Z  -0.63f
+#define BMI270_GYR_BIAS_X  0.0f
+#define BMI270_GYR_BIAS_Y  0.0f
+#define BMI270_GYR_BIAS_Z  0.0f
 
 // 加速度零偏 (单位 mg, 平放静止时: 均值 - 理论重力 (0,0,-1000))
-#define BMI270_ACC_BIAS_X  4.8f
-#define BMI270_ACC_BIAS_Y  -6.6f
-#define BMI270_ACC_BIAS_Z  -19.0f
+#define BMI270_ACC_BIAS_X  0.0f
+#define BMI270_ACC_BIAS_Y  0.0f
+#define BMI270_ACC_BIAS_Z  0.0f
+
+//角度零偏移
+#define BMI270_ANGLE_BIAS_X  0.0f
+#define BMI270_ANGLE_BIAS_Y  0.0f
+#define BMI270_ANGLE_BIAS_Z  0.0f
 
 //UART 配置
 //uart0: TX=0, RX=1
@@ -83,6 +88,13 @@ public:
         int16_t temp;         // 温度
     };
 
+    float acc_f_[3] = { 0, 0, 0 };
+    float gyr_f_[3] = { 0, 0, 0 };
+    float Angleacc[3] = { 0, 0, 0 };
+    float Angle[3] = {0, 0, 0};
+    float AngleGyrop[3] = { BMI270_ANGLE_BIAS_X, BMI270_ANGLE_BIAS_Y, BMI270_ANGLE_BIAS_Z };
+    float temp_co;
+
     // 初始化: I2C 初始化 + 加载 config file + 配置传感器 (100Hz, ±4g, ±2000dps)
     //   sda/scl: Pico GPIO 引脚号 (默认 GP16/GP17, I2C0)
     //   addr   : I2C 地址, 0 = 自动探测 0x68/0x69
@@ -96,7 +108,7 @@ public:
     //   acc_mg[3]  : 加速度 (单位 mg)
     //   gyr_dps[3] : 角速度 (单位 dps)
     //   temp_c     : 温度 (单位 °C)
-    bool read(float acc_mg[3], float gyr_dps[3], float *temp_c);
+    bool read(float acc_mg[3] , float gyr_dps[3] , float *temp_c);
 
     // 姿态解算 (互补滤波, BMI270_OUTPUT_MODE=2 用)
     //   dt: 两次调用间隔 (秒), 建议用实际测得的时间
@@ -118,13 +130,14 @@ public:
     uint8_t addr()    const { return addr_; }
     uint8_t chip_id() const { return chip_id_; }
 
+
+    
 private:
     uint8_t addr_ = 0;
     uint8_t chip_id_ = 0;
 
     // 滤波状态 (BMI270_OUTPUT_MODE=1 时使用)
-    float acc_f_[3] = { 0, 0, 0 };
-    float gyr_f_[3] = { 0, 0, 0 };
+    
     bool filter_inited_ = false;
 
     // 姿态状态 (BMI270_OUTPUT_MODE=2 时使用)
