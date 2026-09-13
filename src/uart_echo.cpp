@@ -3,6 +3,33 @@
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
 #include "uart_echo.hpp"
+#include <charconv>
+#include <string>
+#include <system_error>
+
+bool parse_int(const std::string& s, int& out)
+{
+    if (s.empty()) return false;
+
+    auto [ptr, ec] = std::from_chars(s.data(),
+                                     s.data() + s.size(),
+                                     out);
+
+    return ec == std::errc() && ptr == s.data() + s.size();
+}
+
+bool parse_double(const std::string& s, double& out)
+{
+    if (s.empty()) return false;
+
+    auto [ptr, ec] = std::from_chars(s.data(),
+                                     s.data() + s.size(),
+                                     out,
+                                     std::chars_format::general);
+
+    return ec == std::errc() && ptr == s.data() + s.size();
+}
+
 
 // ============= 内部常量与状态（仅本文件可见） =============
 #define BUFFER_SIZE 256
@@ -26,6 +53,8 @@ void UART::uart_echo_init() {
     // 设置TX和RX引脚
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    gpio_set_dir(UART_RX_PIN, GPIO_IN); // 确保是输入模式
+    gpio_pull_up(UART_RX_PIN); 
 
     // 禁用流控
     uart_set_hw_flow(UART_ID, false, false);
@@ -172,5 +201,11 @@ void UART::uart_echo_service() {
     if ((now_us - last_report_time_us) >= STATUS_INTERVAL_US) {
         printf("[状态] RX空闲中\n");
         last_report_time_us = now_us;
+    }
+}
+
+void UART::uart_echo_flush() {
+    while (uart_is_readable(UART_ID)) {
+        uart_getc(UART_ID);
     }
 }
