@@ -21,8 +21,25 @@
 
 #include <vector>
 #include "hardware/timer.h"
-#include <string>
 #include "hardware/uart.h"
+#include "pico/stdlib.h"
+#include <stdio.h>
+#include "hardware/gpio.h"
+#include "uart_echo.hpp"
+#include <charconv>
+#include <string>
+#include <system_error>
+#include <string_view>
+#include <cstddef>
+
+enum class FieldType { INT, DOUBLE };
+
+struct Field {
+    const char* key;
+    FieldType   type;
+    void*       out;
+};
+
 
 class UART {
 private:
@@ -61,5 +78,6 @@ public:
     void uart_echo_service();
 };
 
-bool parse_int(const std::string& s, int& out);
-bool parse_double(const std::string& s, double& out);
+bool parse_double(std::string_view s, double& out);
+std::string_view trim(std::string_view sv);
+bool parse_fields(std::string_view line, const Field* fields, size_t n);

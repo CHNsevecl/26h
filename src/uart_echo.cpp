@@ -1,33 +1,77 @@
-#include <stdio.h>
-#include "pico/stdlib.h"
-#include "hardware/uart.h"
-#include "hardware/gpio.h"
 #include "uart_echo.hpp"
-#include <charconv>
-#include <string>
-#include <system_error>
 
-bool parse_int(const std::string& s, int& out)
+bool parse_double(std::string_view s, double& out)
 {
     if (s.empty()) return false;
-
-    auto [ptr, ec] = std::from_chars(s.data(),
-                                     s.data() + s.size(),
-                                     out);
-
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(),
+                                     out, std::chars_format::general);
     return ec == std::errc() && ptr == s.data() + s.size();
 }
 
-bool parse_double(const std::string& s, double& out)
+bool parse_int(std::string_view s, int& out)
 {
     if (s.empty()) return false;
-
-    auto [ptr, ec] = std::from_chars(s.data(),
-                                     s.data() + s.size(),
-                                     out,
-                                     std::chars_format::general);
-
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), out);
     return ec == std::errc() && ptr == s.data() + s.size();
+}
+
+// ---- trim ----
+std::string_view trim(std::string_view sv)
+{
+    auto is_ws = [](char c){ return c==' '||c=='\r'||c=='\n'||c=='\t'; };
+    while (!sv.empty() && is_ws(sv.front())) sv.remove_prefix(1);
+    while (!sv.empty() && is_ws(sv.back()))  sv.remove_suffix(1);
+    return sv;
+}
+
+// ---- 核心：按 fields 数组顺序一一对应 ----
+// 返回 true 表示所有 field 都成功解析到
+bool parse_fields(std::string_view line, const Field* fields, size_t n)
+{
+    line = trim(line);
+
+    // 每个 field 一个 "已解析" 标记，放栈上
+    // 如果 n 可能很大，用位图；这里假设 n 有限（<64）
+    bool found[64] = { false };
+    if (n > 64) return false;   // 或者改成其他策略
+
+    size_t i = 0;
+    while (i < line.size()) {
+        while (i < line.size() && line[i] == ' ') ++i;
+        if (i >= line.size()) break;
+
+        size_t j = i;
+        while (j < line.size() && line[j] != ' ') ++j;
+        std::string_view token = line.substr(i, j - i);
+        i = j;
+
+        size_t colon = token.find(':');
+        if (colon == std::string_view::npos) continue;
+
+        std::string_view key = token.substr(0, colon);
+        std::string_view val = token.substr(colon + 1);
+        if (val.empty()) continue;
+
+        // 在 fields 里找 key
+        for (size_t k = 0; k < n; ++k) {
+            if (key != fields[k].key) continue;
+            if (found[k]) break;   // 重复 key，跳过
+
+            bool ok = false;
+            if (fields[k].type == FieldType::INT) {
+                ok = parse_int(val, *static_cast<int*>(fields[k].out));
+            } else {
+                ok = parse_double(val, *static_cast<double*>(fields[k].out));
+            }
+            if (ok) found[k] = true;
+            break;
+        }
+    }
+
+    // 检查是否全部解析到
+    for (size_t k = 0; k < n; ++k)
+        if (!found[k]) return false;
+    return true;
 }
 
 

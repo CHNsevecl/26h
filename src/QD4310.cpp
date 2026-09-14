@@ -64,9 +64,28 @@ uint8_t QD4310::CRC8(const std::vector<uint8_t>& data) {
     return crc;
 }
 
-uint16_t QD4310::rad (double angle_rad) {
-    if(angle_rad < 0 && angle_rad > -2*PI){
-        angle_rad = 2*PI + angle_rad;
+uint16_t QD4310::rad(double angle_rad) {
+    if(angle_rad > 2.0 * M_PI) {
+        angle_rad = std::fmod(angle_rad, 2.0 * M_PI);
     }
+    else if(angle_rad < 0.0) {
+        if(angle_rad < -2.0 * M_PI) {
+            angle_rad = std::fmod(angle_rad, 2.0 * M_PI);
+        }
+        angle_rad = std::fmod(angle_rad, 2.0 * M_PI) + 2.0 * M_PI;
+    }
+
     return static_cast<uint16_t>(angle_rad /(2*PI)*65535);
+}
+
+uint16_t QD4310::angle_to_raw(double theta_deg) {
+    // 1. 把角度归一到 [-180, 180)
+    double t = std::fmod(theta_deg + 180.0, 360.0);
+    if (t < 0) t += 360.0;
+    t -= 180.0;
+
+    // 2. 映射到 [0, 65535]
+    double v = (t + 180.0) / 360.0 * 65535.0;
+    v = std::clamp(v, 0.0, 65535.0);
+    return static_cast<uint16_t>(std::lround(v));
 }

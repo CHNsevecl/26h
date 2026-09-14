@@ -14,11 +14,13 @@
 inline SemaphoreHandle_t xPrintMutex = NULL;  // 定义互斥量句柄
 
 struct taskParams1 {
-    int* distance;
+    double* distance;
+    double* speed;
     QD4310* qd4310;
 };
 struct taskParams2 {
-    int* distance;
+    double* distance;
+    double* speed;
     UART uart;
 };
 

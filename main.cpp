@@ -15,15 +15,19 @@ int main() {
     QD4310 qd4310;
 
 
-    int distance = 0; // 初始化距离变量
+
+    double distance = 0.0; // 初始化距离变量
+    double speed = 0.0; // 初始化速度变量
 
     static taskParams1 params1;            // 用 static，别 new
     params1.distance = &distance;       // 指向真实 int
+    params1.speed = &speed;             // 指向真实 double
     params1.qd4310 = &qd4310;            // 指向真实 QD4310
 
     static taskParams2 params2;            // 用 static，别 new
     params2.distance = &distance;       // 指向真实 int
-    params2.uart     = uart;              // 拷贝一份 UART 进去
+    params2.speed = &speed;             // 指向真实 double
+    params2.uart = uart;              // 拷贝一份 UART 进去
 
 
     TaskHandle_t task1Handle = NULL;

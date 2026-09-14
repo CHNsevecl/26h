@@ -10,6 +10,8 @@
 //字节库
 #include <cstdint>
 #include <iostream>
+//
+#include <cmath>
 //延时库
 #include <chrono>
 #include <thread>
@@ -56,6 +58,7 @@ public:
     void QD4310_Contol(uint8_t addr ,uint8_t Control_mode ,uint16_t Control_quantity);
     uint16_t rad (double angle);
     uint8_t CRC8(const std::vector<uint8_t>& data);
+    uint16_t angle_to_raw(double theta_deg);
 };
 
 #endif
