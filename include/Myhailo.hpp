@@ -17,7 +17,7 @@ const std::vector<std::string> class_names = {
     "Steel_Ball","pipe"
 };
 
-const std::string hef_path = "/home/sevecl/Desktop/C/Project/26年电赛/yolov8s.hef";
+const std::string hef_path = "/home/sevecl/Desktop/C/Project/26年电赛/ballpipe_9_14.hef";
 constexpr size_t expected_input = 640*640*3;
 const int max_boxes_per_class = 100; // 每个类别最多100个框
 const float score_threshold = 0.70f; // 画框阈值
