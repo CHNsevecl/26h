@@ -8,7 +8,9 @@ std::condition_variable g_cv;
 std::mutex t_mutex;
 std::condition_variable t_cv;
 bool g_stop = false;
+bool cap_runing = false;
 double target_point = 5.0f; // 目标点的x坐标，单位为厘米
+double d_cm = 0.0f;
 
 void mission1(){
     std::string pipeline = 
@@ -31,12 +33,17 @@ void mission1(){
     }
 
     cv::Mat frame_rubbish;
-    const int warmupFrames = 30;   // 按摄像头/分辨率调整
+    int warmupFrames = 30;   // 按摄像头/分辨率调整
     for (int i = 0; i < warmupFrames; ++i) {
         if (!cap.read(frame_rubbish)) {
             std::cerr << "Warmup failed at frame " << i << std::endl;
             return;
         }
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(t_mutex);
+        cap_runing = true;
     }
 
     double pipe_length = 25.0f;
@@ -48,6 +55,11 @@ void mission1(){
         if (frame.empty()) {
             std::cerr << "Failed to capture frame" << std::endl;
             break;
+        }
+
+        if(warmupFrames > 0) {
+            --warmupFrames;
+            continue; // Skip processing during warmup
         }
 
         frame = Stream_process(frame, target_w, target_h); // Resize and letterbox the frame
@@ -86,10 +98,16 @@ void mission1(){
                 );
 
                 double d = ((det.upper.x + det.lower.x) / 2) - (320+target_point/length_per_pixel); // 将检测到的钢球的中心点x坐标入队
+
+                {
+                    std::lock_guard<std::mutex> lock(t_mutex);
+                    d_cm = d * length_per_pixel; // 将像素距离转换为厘米距离
+                }
+                
                 
                 {
                     std::lock_guard<std::mutex> lock(g_mutex);
-                    g_queue.push(d * length_per_pixel); // 将检测到的钢球的中心点x坐标入队
+                    g_queue.push(d_cm); // 将检测到的钢球的中心点x坐标入队
                 }
                 g_cv.notify_one();  // 通知消费者
 
@@ -116,8 +134,11 @@ void mission2() {
         std::cerr << "Failed to open UART" << std::endl;
         return;
     }
-    std::ostringstream oss;
     
+   
+    while(!cap_runing) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
 
     while (true) {
         std::unique_lock<std::mutex> lock(g_mutex);
@@ -131,7 +152,7 @@ void mission2() {
         g_queue.pop();
         lock.unlock();
         if(last_data != 0.0f) {
-           speed = (data - last_data) / std::chrono::duration<double>(std::chrono::steady_clock::now() - last_send_time).count();
+        speed = (data - last_data) / std::chrono::duration<double>(std::chrono::steady_clock::now() - last_send_time).count();
         }
         last_send_time = std::chrono::steady_clock::now();
         last_data = data;
@@ -143,8 +164,38 @@ void mission2() {
             std::cerr << "Failed to send data over UART" << std::endl;
             break;
         }
+
+        
     }
+    
 
     uart.close();
 }
 
+void mission3(){
+    // {
+    //     std::lock_guard<std::mutex> lock(t_mutex);
+        while(!cap_runing) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    // }
+    
+    std::this_thread::sleep_for(std::chrono::seconds(1)); // 等待，确保mission1和mission2已经开始运行
+
+    while(1){
+        double local_d_cm;
+        // {
+            // std::lock_guard<std::mutex> lock(t_mutex);
+            local_d_cm = d_cm; // 读取共享变量d_cm
+        // }
+
+        if(local_d_cm < -0.5f) {
+            std::cout << "Steel ball is to the left of the target point." << std::endl;
+        } else if(local_d_cm > 0.5f) {
+            std::cout << "Steel ball is to the right of the target point." << std::endl;
+        } else {
+            std::cout << "Steel ball is at the target point." << std::endl;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(33)); // 每0.5秒检查一次
+    }
+}

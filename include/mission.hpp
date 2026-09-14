@@ -16,5 +16,6 @@
 
 void mission1();
 void mission2();
+void mission3();
 
 #endif
