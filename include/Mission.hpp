@@ -9,6 +9,7 @@
 #include "semphr.h"
 #include "task.h"
 #include "uart_echo.hpp"
+#include "BMI270.hpp"
 #include "QD4310.hpp"
 
 inline SemaphoreHandle_t xPrintMutex = NULL;  // 定义互斥量句柄
@@ -24,7 +25,13 @@ struct taskParams2 {
     UART uart;
 };
 
+struct taskParams3 {
+    BMI270* bmi270;
+    float* accx;
+};
+
 void vTask1(void *pvParameters);
 void vTask2(void *pvParameters);
+void vTask3(void *pvParameters);
 
 #endif /* Mission_hpp */

@@ -9,8 +9,8 @@
 //   1 = 滤波数据 (零偏补偿 + EMA 低通)
 //   2 = VOFA+ 姿态 (FireWater: roll,pitch,yaw, 配 cube 3D 控件)
 //   3 = VOFA+ 加速度波形 (FireWater: ax,ay,az, 配 waveform 控件)
-#define BMI270_OUTPUT_MODE  2   // ← 切换这里: 0=raw, 1=filtered, 2=姿态, 3=加速度波形
-#define BMI270_SERIAL_CHOSEN 1  // 0=USB CDC, 1=UART0 (BMI270_OUTPUT_MODE=2/3 时生效)
+#define BMI270_OUTPUT_MODE  3   // ← 切换这里: 0=raw, 1=filtered, 2=姿态, 3=加速度波形
+#define BMI270_SERIAL_CHOSEN 3  // 0=USB CDC, 1=UART0 (BMI270_OUTPUT_MODE=2/3 时生效)
 
 #define BMI270_angle_unit 0  // 0=rad, 1=deg (BMI270_OUTPUT_MODE=2 时生效)
 
@@ -77,7 +77,7 @@ public:
         : uart_(UART_ID0, UART_BAUD_RATE0, UART_TX_PIN0, UART_RX_PIN0)
     #endif
     {
-        #if BMI270_SERIAL_CHOSEN != 0
+        #if BMI270_SERIAL_CHOSEN == 1 || BMI270_SERIAL_CHOSEN == 2
         uart_.uart_echo_init();
         #endif
     }
@@ -88,6 +88,7 @@ public:
         int16_t temp;         // 温度
     };
 
+    float acc_mg[3], gyr_dps[3], temp_c;
     float acc_f_[3] = { 0, 0, 0 };
     float gyr_f_[3] = { 0, 0, 0 };
     float Angleacc[3] = { 0, 0, 0 };

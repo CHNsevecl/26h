@@ -12,8 +12,8 @@
  *   如果换正品模块且数据正常(静止 |a| = 1.00g), 把 BMI270::ACC_LSB_PER_G 改回 8192.
  */
 
-#include "BMI270.hpp"
-#include "bmi270_config.h"
+#include "../include/BMI270.hpp"
+#include "../include/bmi270_config.h"
 
 #include <cmath>
 #include <cstdio>
@@ -265,17 +265,17 @@ bool BMI270::update_attitude(float dt) {
     // Angle[2] = BMI270_ATT_KP * AngleGyrop[2] + (1.0f - BMI270_ATT_KP) * Angleacc[2];
 
     // 加速度计角度
-    Angleacc[0] = atan2f(ay, az) * 180.0f / M_PI;   // roll
-    Angleacc[1] = atan2f(-ax, az) * 180.0f / M_PI;  // pitch
+    Angleacc[0] = atan2f(-ax, az)* 180.0f / M_PI;   // roll
+    Angleacc[1] = atan2f(ay, az) * 180.0f / M_PI;  // pitch
 
     // 陀螺仪积分
-    AngleGyrop[0] = Angle[0] + gx * dt;   // roll
-    AngleGyrop[1] = Angle[1] + gy * dt;   // pitch
+    AngleGyrop[0] = Angle[0] + gy * dt;   // roll
+    AngleGyrop[1] = Angle[1] + gx * dt;   // pitch
     AngleGyrop[2] = Angle[2] + gz * dt;   // yaw，不融合
 
     // 互补滤波
     Angle[0] = BMI270_ATT_KP * AngleGyrop[0] + (1-BMI270_ATT_KP) * Angleacc[0];
-    Angle[1] = BMI270_ATT_KP * AngleGyrop[1] + (1-BMI270_ATT_KP) * Angleacc[1];
+    Angle[1] = BMI270_ATT_KP * AngleGyrop[1] + (1-BMI270_ATT_KP) * Angleacc[1]; //x轴仰角
     Angle[2] = AngleGyrop[2];   // yaw 只积分
 
     // 加速度计估算倾角 (度): 重力方向投影
@@ -321,7 +321,6 @@ void BMI270::print_state() {
 
 #elif BMI270_OUTPUT_MODE == 3
     // ---- VOFA+ 加速度波形: "ax,ay,az\n" (mg) ----
-    float acc_mg[3], gyr_dps[3], temp_c;
     if (read(acc_mg, gyr_dps, &temp_c)) {
         #if BMI270_SERIAL_CHOSEN == 0
             printf("%.1f,%.1f,%.1f\n", acc_mg[0], acc_mg[1], acc_mg[2]);
